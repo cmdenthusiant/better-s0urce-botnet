@@ -29,7 +29,6 @@ class bot {
         this.conn=null;
         this.online=false;
         this.targetId=targetId;
-        console.log(this.targetId)
         this.botName=botName;
         this.closeConnTO=null;
         this.login();
