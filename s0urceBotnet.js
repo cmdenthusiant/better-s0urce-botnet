@@ -1,6 +1,5 @@
 const webSocket = require('websocket').client;
 const crypto = require('crypto');
-const { disconnect } = require('process');
 const request = require('request');
 const rl = require('readline').createInterface({
     input:process.stdin,
@@ -30,6 +29,7 @@ class bot {
         this.conn=null;
         this.online=false;
         this.targetId=targetId;
+        console.log(this.targetId)
         this.botName=botName;
         this.closeConnTO=null;
         this.login();
@@ -173,9 +173,11 @@ setInterval(()=>{if(statusLoop)genStatus();},500);
             }
             if(ans.toLowerCase().startsWith('botname'))botName=args.join(' ');
             if(ans.toLowerCase().startsWith('botamount')){
-                botClose=true;
                 botAmount=+args[0]||50;
-                setTimeout(()=>createBot(),1500);
+                if(!botClose){
+                    botClose=true;
+                    setTimeout(()=>createBot(),1500);
+                }
             }
         }
         main();
