@@ -11,6 +11,7 @@ var reHackms = 2000;
 var targetId = "";
 var botAmount = 50;
 var comment = "";
+var desc = "no description";
 var botsOnline = 0;
 var SuccessfulHacks = 0;
 var EnteredWords = 0;
@@ -21,7 +22,16 @@ var hashword;
 request('https://raw.githubusercontent.com/cmdenthusiant/better-s0urce-botnet/main/words.json',(e,r,b)=>hashword=JSON.parse(b))
 var wordsNum = {};
 const randRange=(min,max)=>Math.round(Math.random()*(max-min)+min);
-
+const shuffleArr=(arr)=>{
+    let arrc=arr.concat();
+    for(let i=arrc.length-1;i>0;i--) {
+        let j=Math.floor(Math.random()*(i+1));
+        let t=arrc[i];
+        arrc[i]=arrc[j];
+        arrc[j]=t;
+    }
+    return arrc;
+}
 class bot {
     constructor(){
         this.socket=new webSocket();
@@ -30,11 +40,13 @@ class bot {
         this.online=false;
         this.targetId=targetId;
         this.botName=botName;
+        this.desc='no description';
         this.closeConnTO=null;
         this.login();
         botClose=false;
     }
     Disconnect(){
+        this.desc='no description';
         return this.conn.close();
     }
     destroy(){
@@ -56,10 +68,10 @@ class bot {
                 conn.on('close',()=>{
                     if(this.online){this.online=false;botsOnline--;}
                     this.socket?.removeAllListeners();
-                    if(!botClose)setTimeout(()=>this.login(),3000);
+                    if(!botClose)setTimeout(()=>this.login(),2000);
                     else this.destroy();
                 });
-                this.reloadCloseTO();
+                setTimeout(()=>this.reloadCloseTO(),3000);
                 setInterval(()=>{conn.send('2')},randRange(1000,1300));
             })
             this.socket.on('connectFailed',()=>this.login());
@@ -67,7 +79,7 @@ class bot {
     }
     reloadCloseTO(){
         clearTimeout(this.closeConnTO);
-        this.closeConnTO=setTimeout(()=>this.Disconnect(),5000);
+        this.closeConnTO=setTimeout(()=>this.Disconnect(),6000);
     }
     setUp(){
         this.conn.on('message',msg=>{
@@ -75,8 +87,10 @@ class bot {
             if(this.botName!=botName){this.botName=botName;return this.Disconnect();}
             if(msg.utf8Data.startsWith('42'))JSON.parse(msg.utf8Data.slice(2)||{})[1].unique?.forEach(c=>{
                 if(c.task == 2008){
+                    if(this.desc!=desc)this.changeDesc();
                     if(!this.online){this.online=true;botsOnline++;}
                     if(this.targetId!='autoTarget')return;
+                    c.data=shuffleArr(c.data);
                     for(let d in c.data){
                         if(c.data[d]?.name!=botName)return this.targetId=c.data[d].id;
                     }
@@ -85,7 +99,7 @@ class bot {
                     this.reloadCloseTO();
                     if(c.opt==0)return this.startHack();
                     if(c.url){
-                        return this.Hack(c.url.i,c.url.t);
+                        return setTimeout(()=>this.Hack(c.url.i,c.url.t),randRange(0,450));
                     }
                 }
                 if(c.task==2003){
@@ -122,10 +136,14 @@ class bot {
         })
         request('http://s0urce.io/client/img/word/'+t+'/'+num).pipe(hash);
     }
+    changeDesc(){
+        this.desc=desc;
+        this.conn.send('42'+JSON.stringify(['playerRequest',{task:104,desc:this.desc}]));
+    }
 }
 function createBot(){
     for(let i=0;i<botAmount;i++){
-        setTimeout(()=>new bot(),randRange(0,3000));
+        setTimeout(()=>new bot(),i*randRange(0,350));
     }
 }
 function genStatus(){
@@ -135,15 +153,17 @@ function genStatus(){
     attack <Target ID> : Generate bots to attack target.
     autotarget : let bots AutoTarget others.
     stop : Stop attacks.
-    botname <name> : Set bots name.
-    botamount <number> : Set number of bots.
-    comment <comment> : Set comment afted hacking.
+    name <name> : Set bots name.
+    amount <number> : Set number of bots.
+    comm <comment> : Set comment afted hacking.
+    desc <description> : Set Description.
     reset : Reset Status(Not ALL).
-    status : Status Mode, Press any to Exit.
+    stat : Status Mode, Press any to Exit.
 ---------------------------Status---------------------------
     Bots Name: ${botName}
     Bot Amount: ${botAmount}
     Comment: ${comment||null}
+    Description: ${desc}
     Bots online: ${botsOnline}
     Target ID: ${targetId||null}
     Successful Hacks: ${SuccessfulHacks}
@@ -169,21 +189,23 @@ setInterval(()=>{if(statusLoop)genStatus();},500);
             targetId='autoTarget';
             if(botClose)createBot();
         }
-        if(ans.toLowerCase()=='status')statusLoop=true;
-        if(ans.toLowerCase().startsWith('comment'))comment=args[0]||'';
+        if(ans.toLowerCase().startsWith('stat'))statusLoop=true;
+        if(ans.toLowerCase().startsWith('comm'))comment=args.join(' ')||'';
+        if(ans.toLowerCase().startsWith('desc'))desc=args.join(' ')||'no description';
         if(args[0]){
             if(ans.toLowerCase().startsWith('attack')){
                 targetId = args[0];
                 if(botClose)createBot();
             }
-            if(ans.toLowerCase().startsWith('botname'))botName=args.join(' ');
-            if(ans.toLowerCase().startsWith('botamount')){
+            if(ans.toLowerCase().startsWith('name'))botName=args.join(' ');
+            if(ans.toLowerCase().startsWith('amount')){
                 botAmount=+args[0]||50;
                 if(!botClose){
                     botClose=true;
                     setTimeout(()=>createBot(),1500);
                 }
             }
+            
         }
         main();
     })
