@@ -16,6 +16,7 @@ var SuccessfulHacks = 0;
 var EnteredWords = 0;
 var statusLoop = false;
 var HackedBt = 0;
+var lastMessage = "";
 var hashword;
 request('https://raw.githubusercontent.com/cmdenthusiant/better-s0urce-botnet/main/words.json',(e,r,b)=>hashword=JSON.parse(b))
 var wordsNum = {};
@@ -42,6 +43,7 @@ class bot {
     login(){
         this.socket=new webSocket();
         request('http://s0urce.io/socket.io/?EIO=3&transport=polling&t=N_9akpJ',(e,r,b)=>{
+            if(!b)return setTimeout(()=>this.login(),3000);
             this.botSid = JSON.parse(b.slice(5)).sid;
             this.socket.connect('ws://s0urce.io/socket.io/?EIO=3&transport=websocket&sid='+this.botSid);
             this.socket.on('connect',conn=>{
@@ -93,8 +95,11 @@ class bot {
                         HackedBt+=c.extra?.overlay?.value||0;
                     };
                     this.reloadCloseTO();
-                    this.conn.send('42'+JSON.stringify(['playerRequest',{task:106,text:comment}]));
+                    if(comment)this.conn.send('42'+JSON.stringify(['playerRequest',{task:106,text:comment}]));
                     setTimeout(()=>this.startHack(),reHackms);
+                }
+                if(c.task==2006){
+                    lastMessage="From "+c.name+": "+c.message;
                 }
             })
         })
@@ -144,6 +149,7 @@ function genStatus(){
     Successful Hacks: ${SuccessfulHacks}
     Entered Words: ${EnteredWords}
     Hacked BTcoins: ${(''+HackedBt).split('.')[0]+'.'+((''+HackedBt).split('.')[1]?.slice(0,4)||0)} BT
+    Last Message: ${lastMessage||null}
 ------------------------------------------------------------
 `);}
 setInterval(()=>{if(statusLoop)genStatus();},500);
@@ -157,6 +163,7 @@ setInterval(()=>{if(statusLoop)genStatus();},500);
             SuccessfulHacks=0;
             EnteredWords=0;
             HackedBt=0;
+            lastMessage='';
         }
         if(ans.toLowerCase()=='autotarget'){
             targetId='autoTarget';
