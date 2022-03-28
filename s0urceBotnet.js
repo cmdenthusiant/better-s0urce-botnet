@@ -9,7 +9,7 @@ var botName = 'Botnet';
 var botClose = true;
 var reHackms = 2000;
 var targetId = "";
-var botAmount = 30;
+var botAmount = 50;
 var comment = "";
 var desc = "no description";
 var botsOnline = 0;
@@ -99,7 +99,7 @@ class bot {
                     this.reloadCloseTO();
                     if(c.opt==0)return this.startHack();
                     if(c.url){
-                        return setTimeout(()=>this.Hack(c.url.i,c.url.t),randRange(0,450));
+                        return this.Hack(c.url.i,c.url.t);
                     }
                 }
                 if(c.task==2003){
@@ -107,9 +107,9 @@ class bot {
                         this.targetId=targetId;
                         SuccessfulHacks++
                         HackedBt+=c.extra?.overlay?.value||0;
+                        if(comment)this.conn.send('42'+JSON.stringify(['playerRequest',{task:106,text:comment}]));
                     };
                     this.reloadCloseTO();
-                    if(comment)this.conn.send('42'+JSON.stringify(['playerRequest',{task:106,text:comment}]));
                     setTimeout(()=>this.startHack(),reHackms);
                 }
                 if(c.task==2006){
