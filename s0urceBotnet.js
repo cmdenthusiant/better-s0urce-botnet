@@ -7,7 +7,7 @@ const rl = require('readline').createInterface({
 })
 var botName = 'Botnet';
 var botClose = true;
-var reHackms = 2000;
+var reHackms = 3000;
 var targetId = "";
 var botAmount = 30;
 var comment = "";
@@ -68,7 +68,7 @@ class bot {
                 conn.on('close',()=>{
                     if(this.online){this.online=false;botsOnline--;}
                     this.socket?.removeAllListeners();
-                    if(!botClose)setTimeout(()=>this.login(),2000);
+                    if(!botClose)setTimeout(()=>this.login(),3000);
                     else this.destroy();
                 });
                 setTimeout(()=>this.reloadCloseTO(),3000);
@@ -79,7 +79,7 @@ class bot {
     }
     reloadCloseTO(){
         clearTimeout(this.closeConnTO);
-        this.closeConnTO=setTimeout(()=>this.Disconnect(),6000);
+        this.closeConnTO=setTimeout(()=>this.Disconnect(),8000);
     }
     setUp(){
         this.conn.on('message',msg=>{
@@ -89,17 +89,18 @@ class bot {
                 if(c.task == 2008){
                     if(this.desc!=desc)this.changeDesc();
                     if(!this.online){this.online=true;botsOnline++;}
-                    if(this.targetId!='autoTarget')return;
+                    if(!(''+this.targetId).startsWith('autoTarget'))return;
                     c.data=shuffleArr(c.data);
                     for(let d in c.data){
-                        if(c.data[d]?.name!=botName)return this.targetId=c.data[d].id;
+                        if(c.data[d]?.name!=botName&&c.data[d]?.name.startsWith(this.targetId.split(' ').slice(1).join(' ')))return this.targetId=c.data[d].id;
                     }
+                    this.targetId=c.data[randRange(0,c.data.length-1)].id;
                 }
                 if(c.task == 333){
                     this.reloadCloseTO();
-                    if(c.opt==0)return this.startHack();
+                    if(c.opt==0){return this.startHack();}
                     if(c.url){
-                        return this.Hack(c.url.i,c.url.t);
+                        return setTimeout(()=>this.Hack(c.url.i,c.url.t),randRange(150,350));
                     }
                 }
                 if(c.task==2003){
@@ -119,18 +120,18 @@ class bot {
         })
     }
     startHack(){
-        if(this.targetId!='autoTarget'){return this.conn.send('42'+JSON.stringify(['playerRequest',{task:100,id:this.targetId,port:randRange(0,2)}]));}
-        setTimeout(()=>this.startHack(),reHackms);
+        if((''+this.targetId).startsWith('autoTarget'))return setTimeout(()=>this.startHack(),reHackms);
+        this.conn.send('42'+JSON.stringify(['playerRequest',{task:100,id:this.targetId,port:randRange(0,2)}]));
     }
     Hack(num,t){
         EnteredWords++;
-        let w = wordsNum[num];
+        let w = wordsNum[t+num];
         if(w)return this.conn.send('42'+JSON.stringify(['playerRequest',{task:777,word:w}]));
         let hash = crypto.createHash('md5');
         hash.once('finish',()=>{
             hash.end();
             w = hashword[hash.digest('hex')];
-            wordsNum[num]=w;
+            wordsNum[t+num]=w;
             this.conn.send('42'+JSON.stringify(['playerRequest',{task:777,word:w}]));
             hash.destroy();
         })
@@ -143,7 +144,7 @@ class bot {
 }
 function createBot(){
     for(let i=0;i<botAmount;i++){
-        setTimeout(()=>new bot(),i*randRange(0,350));
+        setTimeout(()=>new bot(),i*randRange(0,500));
     }
 }
 function genStatus(){
@@ -168,11 +169,12 @@ function genStatus(){
     Target ID: ${targetId||null}
     Successful Hacks: ${SuccessfulHacks}
     Entered Words: ${EnteredWords}
+    Words Learned: ${Object.keys(wordsNum).length}
     Hacked BTcoins: ${(''+HackedBt).split('.')[0]+'.'+((''+HackedBt).split('.')[1]?.slice(0,4)||0)} BT
     Last Message: ${lastMessage||null}
 ------------------------------------------------------------
 `);}
-setInterval(()=>{if(statusLoop)genStatus();},500);
+setInterval(()=>{if(statusLoop)genStatus();},100);
 (function main(){
     genStatus();
     rl.question('>',ans=>{
@@ -185,8 +187,8 @@ setInterval(()=>{if(statusLoop)genStatus();},500);
             HackedBt=0;
             lastMessage='';
         }
-        if(ans.toLowerCase()=='autotarget'){
-            targetId='autoTarget';
+        if(ans.toLowerCase().startsWith('autotarget')){
+            targetId='autoTarget '+args.join(' ');
             if(botClose)createBot();
         }
         if(ans.toLowerCase().startsWith('stat'))statusLoop=true;
@@ -202,7 +204,7 @@ setInterval(()=>{if(statusLoop)genStatus();},500);
                 botAmount=+args[0]||50;
                 if(!botClose){
                     botClose=true;
-                    setTimeout(()=>createBot(),1500);
+                    setTimeout(()=>createBot(),3000);
                 }
             }
             
