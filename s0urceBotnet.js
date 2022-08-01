@@ -18,6 +18,7 @@ var EnteredWords = 0;
 var statusLoop = false;
 var HackedBt = 0;
 var lastMessage = "";
+var leaderBoard = Array(10).fill('---undefined---');
 var hashword;
 request('https://raw.githubusercontent.com/cmdenthusiant/better-s0urce-botnet/main/words.json',(e,r,b)=>hashword=JSON.parse(b))
 var wordsNum = {};
@@ -42,11 +43,12 @@ class bot {
         this.botName=botName;
         this.desc='no description';
         this.closeConnTO=null;
+        this.keepAliveLoop=null;
         this.login();
-        botClose=false;
     }
     Disconnect(){
         this.desc='no description';
+        clearInterval(this.keepAliveLoop);
         return this.conn.close();
     }
     destroy(){
@@ -62,9 +64,9 @@ class bot {
                 this.conn = conn;
                 conn.send('2probe');
                 conn.send('5');
-                conn.send('42'+JSON.stringify(['signIn',{name:botName}]));
+                setTimeout(()=>conn.send('42'+JSON.stringify(['signIn',{name:botName}])),1000);
                 this.setUp();
-                setTimeout(()=>this.startHack(),reHackms);
+                setTimeout(()=>this.startHack(),reHackms+3000);
                 conn.on('close',()=>{
                     if(this.online){this.online=false;botsOnline--;}
                     this.socket?.removeAllListeners();
@@ -72,14 +74,14 @@ class bot {
                     else this.destroy();
                 });
                 setTimeout(()=>this.reloadCloseTO(),3000);
-                setInterval(()=>{conn.send('2')},randRange(1000,1300));
+                this.keepAliveLoop=setInterval(()=>{conn.send('2')},25000);
             })
             this.socket.on('connectFailed',()=>this.login());
         })
     }
     reloadCloseTO(){
         clearTimeout(this.closeConnTO);
-        this.closeConnTO=setTimeout(()=>this.Disconnect(),8000);
+        this.closeConnTO=setTimeout(()=>this.Disconnect(),10000);
     }
     setUp(){
         this.conn.on('message',msg=>{
@@ -90,20 +92,29 @@ class bot {
                     if(this.desc!=desc)this.changeDesc();
                     if(!this.online){this.online=true;botsOnline++;}
                     if(!(''+this.targetId).startsWith('autoTarget'))return;
+                    c.data.every((d)=>{
+                        d
+                    })
                     c.data=shuffleArr(c.data);
+                    let targeted = false;
                     for(let d in c.data){
-                        if(c.data[d]?.name!=botName&&c.data[d]?.name.startsWith(this.targetId.split(' ').slice(1).join(' ')))return this.targetId=c.data[d].id;
+                        if(!targeted&&c.data[d]?.name!=botName&&c.data[d]?.name.startsWith(this.targetId.split(' ').slice(1).join(' '))){
+                            this.targetId=c.data[d].id;
+                            targeted = true;
+                        }
+                        if(c.data[d]?.rank<=10&&leaderBoard[c.data[d].rank-1]!=c.data[d]?.name) leaderBoard[c.data[d].rank-1] = c.data[d]?.name;
                     }
-                    this.targetId=c.data[randRange(0,c.data.length-1)].id;
+                    this.targetId=c.data[0].id;
                 }
                 if(c.task == 333){
                     this.reloadCloseTO();
                     if(c.opt==0){return this.startHack();}
                     if(c.url){
-                        return setTimeout(()=>this.Hack(c.url.i,c.url.t),randRange(150,350));
+                        return setTimeout(()=>this.Hack(c.url.i,c.url.t),randRange(150,450));
                     }
                 }
                 if(c.task==2003){
+                    this.lastws=JSON.parse(msg.utf8Data.slice(2)||{});
                     if(c.text?.includes('Hacking successful')){
                         this.targetId=targetId;
                         SuccessfulHacks++
@@ -126,7 +137,10 @@ class bot {
     Hack(num,t){
         EnteredWords++;
         let w = wordsNum[t+num];
-        if(w)return this.conn.send('42'+JSON.stringify(['playerRequest',{task:777,word:w}]));
+        if(w){
+            request('http://s0urce.io/client/img/word/'+t+'/'+num);
+            return setTimeout(()=>this.conn.send('42'+JSON.stringify(['playerRequest',{task:777,word:w}])),randRange(400,1000));
+        }
         let hash = crypto.createHash('md5');
         hash.once('finish',()=>{
             hash.end();
@@ -143,6 +157,7 @@ class bot {
     }
 }
 function createBot(){
+    botClose=false;
     for(let i=0;i<botAmount;i++){
         setTimeout(()=>new bot(),i*randRange(0,500));
     }
@@ -150,17 +165,17 @@ function createBot(){
 function genStatus(){
     console.clear();
     console.log(`
---------------------------Commands--------------------------
-    attack <Target ID> : Generate bots to attack target.
-    autotarget : let bots AutoTarget others.
-    stop : Stop attacks.
-    name <name> : Set bots name.
-    amount <number> : Set number of bots.
-    comm <comment> : Set comment afted hacking.
-    desc <description> : Set Description.
-    reset : Reset Status(Not ALL).
-    stat : Status Mode, Press any to Exit.
----------------------------Status---------------------------
+--------------------------Commands--------------------------    -----LeaderBoard-----
+    attack <Target ID> : Generate bots to attack target.        1.${leaderBoard[0]}
+    autotarget : let bots AutoTarget others.                    2.${leaderBoard[1]}
+    stop : Stop attacks.                                        3.${leaderBoard[2]}
+    name <name> : Set bots name.                                4.${leaderBoard[3]}
+    amount <number> : Set number of bots.                       5.${leaderBoard[4]}
+    comm <comment> : Set comment after hacking.                 6.${leaderBoard[5]}
+    desc <description> : Set Description.                       7.${leaderBoard[6]}
+    reset : Reset Status(Not ALL).                              8.${leaderBoard[7]}
+    stat : Status Mode, Press any to Exit.                      9.${leaderBoard[8]}
+---------------------------Status---------------------------    10.${leaderBoard[9]}
     Bots Name: ${botName}
     Bot Amount: ${botAmount}
     Comment: ${comment||null}
